@@ -1,0 +1,1023 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stranger Escape Room</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Creepster&family=Georgia:ital,wght@0,400;0,700;1,400&display=swap');
+
+        :root {
+            --dark-bg: #050505;
+            --stranger-red: #E21D1D;
+            --blood-dark: #630a0a;
+            --ash: #a0a0a0;
+            --glow: 0 0 15px rgba(226, 29, 29, 0.6);
+            --panel: rgba(0, 0, 0, 0.85); 
+            --text: #fff;
+            --neon-red: var(--stranger-red); 
+            --neon-blue: #00d2ff; 
+            --neon-green: #39ff14;
+            --btn-act: #1e3a8a; 
+            --btn-ctrl: #b91c1c; 
+            --btn-cond: #047857;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body { 
+            font-family: 'Georgia', serif; 
+            color: var(--text); 
+            background-color: var(--dark-bg);
+            margin: 0; 
+            overflow-x: hidden; 
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* SOPHISTICATED DARK BACKGROUND */
+        #bg-container {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            z-index: -2;
+            background: 
+                radial-gradient(circle at 50% 50%, rgba(30, 0, 0, 0.5) 0%, transparent 70%),
+                url('data:image/svg+xml;utf8,<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><filter id="noiseFilter"><feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/></filter><rect width="100%" height="100%" filter="url(%23noiseFilter)" opacity="0.05"/></svg>');
+        }
+
+        .overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+            background: linear-gradient(0deg, rgba(0,0,0,0.6) 0%, transparent 40%, transparent 60%, rgba(0,0,0,0.6) 100%);
+            z-index: 10;
+        }
+
+        .particles {
+            position: fixed; width: 100%; height: 100%;
+            background-image: radial-gradient(circle, #fff 1px, transparent 1px);
+            background-size: 100px 100px;
+            opacity: 0.05;
+            animation: drift 60s linear infinite;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        @keyframes drift { from { transform: translateY(0); } to { transform: translateY(-100px); } }
+
+        h1 { 
+            font-family: 'Creepster', cursive; 
+            font-size: 82px;
+            text-transform: uppercase;
+            letter-spacing: -2px;
+            color: var(--stranger-red);
+            margin: 40px 0 10px;
+            text-shadow: var(--glow);
+            line-height: 0.9;
+            border-bottom: 2px solid var(--stranger-red);
+            padding-bottom: 10px;
+            text-align: center;
+        }
+        .subtitle { 
+            text-align: center; 
+            color: var(--ash); 
+            font-family: 'Georgia', serif; 
+            font-style: italic;
+            margin-bottom: 40px; 
+            font-size: 1.25rem; 
+            text-shadow: 0 2px 4px #000;
+        }
+
+        .screen { display: none; width: 100%; max-width: 1350px; margin: 0 auto; animation: fadeIn 0.5s; position: relative; z-index: 5; }
+        .active { display: block; }
+
+        .grid-layout { display: grid; grid-template-columns: min-content 320px 1fr; gap: 20px; align-items: start; }
+
+        /* Timer Global Overlay */
+        #global-timer-overlay {
+            position: fixed; top: 40px; right: 40px; z-index: 100;
+            font-family: 'Courier New', monospace;
+            background: transparent;
+            display: none; align-items: center; gap: 12px;
+            color: var(--stranger-red);
+            text-shadow: var(--glow);
+        }
+        #global-timer-display { font-size: 32px; font-weight: 400; }
+
+        /* Narrativa */
+        .intro-panel { 
+            text-align: center;
+            max-width: 700px;
+            padding: 40px;
+            border: 1px solid rgba(226, 29, 29, 0.3);
+            background: rgba(0,0,0,0.8);
+            box-shadow: 0 0 50px rgba(0,0,0,1);
+            margin: 50px auto; 
+            backdrop-filter: blur(10px); 
+        }
+        .intro-text { 
+            font-family: 'Georgia', serif;
+            font-size: 20px;
+            line-height: 1.6;
+            color: var(--ash);
+            margin-bottom: 40px;
+            font-style: italic;
+        }
+
+        /* Laberinto */
+        .maze-wrapper { background: rgba(0,0,0,0.8); padding: 20px; border-radius: 12px; border: 1px solid rgba(226, 29, 29, 0.2); box-shadow: 0 10px 40px rgba(0,0,0,0.9); backdrop-filter: blur(8px); }
+        .maze { display: grid; gap: 3px; border: 4px solid var(--blood-dark); background: #050505; padding: 4px; border-radius: 5px;}
+        .maze-1 { grid-template-columns: repeat(5, 60px); grid-template-rows: repeat(5, 60px); border-color: var(--neon-blue); box-shadow: 0 0 20px rgba(0, 210, 255, 0.2); }
+        .maze-2 { grid-template-columns: repeat(8, 48px); grid-template-rows: repeat(8, 48px); border-color: var(--stranger-red); box-shadow: 0 0 25px rgba(226, 29, 29, 0.3); }
+        
+        .cell { background: rgba(0,0,0,0.9); display: flex; justify-content: center; align-items: center; font-size: 26px; border-radius: 3px; }
+        .wall-1 { background: #0a1f0a; box-shadow: inset 0 0 10px #000; } 
+        .wall-2 { background: #2a0505; box-shadow: inset 0 0 10px #000; }
+        .goal { background: radial-gradient(circle, var(--neon-blue) 0%, transparent 70%); animation: pulse 2s infinite; }
+        .goal-2 { background: radial-gradient(circle, var(--neon-green) 0%, transparent 70%); }
+        
+        .player-container { display: flex; justify-content: center; align-items: center; background: rgba(0, 210, 255, 0.15); border-radius: 5px; padding: 2px; box-shadow: 0 0 8px rgba(0, 210, 255, 0.5); }
+
+        .stats-bar { display: flex; justify-content: space-between; font-family: 'Courier New', monospace; color: var(--ash); margin-bottom: 15px; font-size: 0.95em; background: rgba(0,0,0,0.8); padding: 10px; border-radius: 5px; border: 1px solid rgba(226, 29, 29, 0.2);}
+        .score-live { color: var(--neon-green); font-weight: bold; text-shadow: 0 0 5px var(--neon-green); }
+
+        /* Controles */
+        .toolbox { background: rgba(0,0,0,0.85); padding: 20px; border-radius: 12px; border: 1px solid rgba(226, 29, 29, 0.2); display: flex; flex-direction: column; gap: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.9); backdrop-filter: blur(8px);}
+        .toolbox h3 { margin: 5px 0; font-size: 13px; color: var(--ash); border-bottom: 1px solid #333; padding-bottom: 5px; text-transform: uppercase; font-family: 'Courier New', monospace; letter-spacing: 1px;}
+        .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        
+        button { 
+            padding: 10px; 
+            border-radius: 0; 
+            font-weight: 400; 
+            cursor: pointer; 
+            color: #fff; 
+            transition: all 0.3s ease; 
+            font-family: 'Courier New', monospace; 
+            font-size: 13px; 
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            background: transparent;
+            border: 1px solid var(--stranger-red);
+            box-shadow: none;
+        }
+        button:hover { 
+            background: var(--stranger-red); 
+            color: #000;
+            transform: none;
+            box-shadow: 0 0 20px rgba(226, 29, 29, 0.4);
+        }
+        button:active { transform: translateY(1px); }
+        
+        .b-act { border-color: var(--neon-blue); color: var(--neon-blue); }
+        .b-act:hover { background: var(--neon-blue); color: #000; border-color: var(--neon-blue); }
+        
+        .b-ctrl { border-color: var(--stranger-red); color: var(--stranger-red); }
+        .b-ctrl:hover { background: var(--stranger-red); color: #000; border-color: var(--stranger-red); }
+        
+        .b-cond { border-color: var(--neon-green); color: var(--neon-green); }
+        .b-cond:hover { background: var(--neon-green); color: #000; border-color: var(--neon-green); }
+        
+        .b-mod { border-color: #4c1d95; color: #a78bfa; }
+        .b-mod:hover { background: #4c1d95; color: #fff; }
+
+        .b-end { border-color: var(--ash); color: var(--ash); grid-column: span 2; }
+        .b-end:hover { background: var(--ash); color: #000; }
+        
+        .b-start { 
+            background: transparent; 
+            color: var(--stranger-red);
+            border: 2px solid var(--stranger-red);
+            padding: 15px 50px;
+            font-size: 20px;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: var(--glow);
+            width: auto;
+            margin-top: 20px;
+            font-family: 'Georgia', serif;
+            display: inline-block;
+        }
+        .b-start:hover {
+            background: var(--stranger-red);
+            color: #000;
+            box-shadow: 0 0 40px var(--stranger-red);
+            letter-spacing: 6px;
+        }
+
+        /* Código */
+        .program-section { display: grid; grid-template-columns: 1fr 160px; gap: 15px; background: rgba(0,0,0,0.85); padding: 20px; border-radius: 12px; border: 1px solid rgba(226, 29, 29, 0.2); box-shadow: 0 10px 40px rgba(0,0,0,0.9); height: 100%; box-sizing: border-box; backdrop-filter: blur(8px);}
+        .program-area { background: rgba(5,5,5,0.95); min-height: 350px; padding: 15px; border-radius: 8px; font-family: 'Courier New', monospace; font-size: 14px; overflow-y: auto; max-height: 500px; border: 1px inset #222; }
+        .actions { display: flex; flex-direction: column; gap: 12px; }
+        .b-del { border: 1px solid #d97706; background: transparent; color: #d97706; }
+        .b-del:hover { background: #d97706; color: #000; }
+        
+        .b-clear { border: 1px solid #9f1239; background: transparent; color: #9f1239; }
+        .b-clear:hover { background: #9f1239; color: #000; }
+        
+        .b-run { 
+            background: transparent; 
+            color: var(--stranger-red); 
+            border: 2px solid var(--stranger-red);
+            font-size: 15px; 
+            padding: 15px 10px; 
+            height: 100%; 
+            box-shadow: var(--glow); 
+            text-transform: uppercase; 
+            font-weight: 900; 
+        }
+        .b-run:hover {
+            background: var(--stranger-red);
+            color: #000;
+        }
+        
+        .block { padding: 6px 10px; margin-bottom: 4px; border-left: 4px solid transparent; color: var(--ash); background: rgba(255,255,255,0.05); border-radius: 0 4px 4px 0; font-family: 'Courier New', monospace;}
+        .bk-act { border-color: var(--neon-blue); }
+        .bk-ctrl { border-color: var(--stranger-red); color: #ff8a9a; background: rgba(226, 29, 29, 0.1);}
+        .bk-end { border-color: #444; color: #666; }
+
+        /* Binary CSS */
+        .bit-box {
+            width: 70px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 1px solid #333;
+            background: #111;
+            padding: 10px 0;
+        }
+        .bit-box:hover { border-color: var(--neon-blue); }
+        .bit-val {
+            font-size: 2.5rem;
+            font-family: 'Courier New', monospace;
+            color: #444;
+            transition: all 0.2s;
+        }
+        .bit-active .bit-val { color: var(--neon-blue); text-shadow: 0 0 10px var(--neon-blue); }
+        .bit-weight { font-size: 0.8rem; color: #666; font-family: 'Courier New', monospace; }
+        .bit-active { background: rgba(0, 210, 255, 0.05); border-color: var(--neon-blue); }
+
+        .status { 
+            margin-top: 15px; 
+            padding: 15px; 
+            text-align: center; 
+            border-radius: 0; 
+            font-weight: 400; 
+            font-family: 'Courier New', monospace; 
+            border: 1px solid rgba(226, 29, 29, 0.2); 
+            min-height: 25px; 
+            background: rgba(0,0,0,0.9);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        .transition-btn { 
+            background: transparent; 
+            color: var(--neon-blue); 
+            border: 1px solid var(--neon-blue);
+            font-size: 1.2rem; 
+            padding: 15px 20px; 
+            margin-top: 15px; 
+            width: 100%; 
+            display: none; 
+            text-transform: uppercase; 
+            font-weight: bold; 
+            border-radius: 0;
+            letter-spacing: 2px;
+        }
+        .transition-btn:hover {
+            background: var(--neon-blue);
+            color: #000;
+            box-shadow: 0 0 20px var(--neon-blue);
+        }
+
+        /* Fases 3 y 4 */
+        .info-panel { background: rgba(0,0,0,0.95); padding: 40px; border-radius: 0; border: 1px solid rgba(226, 29, 29, 0.3); box-shadow: 0 0 100px rgba(0,0,0,1); max-width: 900px; margin: 0 auto; backdrop-filter: blur(10px);}
+        .java-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; margin-top: 20px; }
+        pre { color: var(--ash); font-family: 'Courier New', monospace; margin: 0; font-size: 15px; line-height: 1.6; }
+        .kw { color: var(--stranger-red); font-weight: bold;} .fn { color: #dcdcaa; } .st { color: #6a9955; font-style: italic;}
+        
+        .fase-info {
+            font-size: 12px;
+            color: var(--ash);
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            opacity: 0.5;
+            font-family: 'Courier New', monospace;
+            z-index: 100;
+        }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes pulse { 0% { transform: scale(0.95); opacity: 0.8;} 50% { transform: scale(1.05); opacity: 1;} 100% { transform: scale(0.95); opacity: 0.8;} }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+        .blinking-text { animation: blink 1.2s infinite; color: var(--neon-blue); font-weight: bold; font-family: 'Courier New', monospace; font-size: 1.4rem; }
+    </style>
+</head>
+<body>
+    <div class="overlay"></div>
+    <div class="particles"></div>
+    <div id="bg-container"></div>
+
+    <div id="global-timer-overlay">
+        <span style="color: #aaa; font-size: 0.8rem;">TIEMPO RESTANTE</span>
+        <span id="global-timer-display">40:00</span>
+    </div>
+
+    <h1>STRANGER ESCAPE</h1>
+    <p class="subtitle">Encuentra el camino a casa antes de que las sombras te alcancen.</p>
+
+    <!-- FASE 0: INTRO -->
+    <div id="screen0" class="screen active">
+        <div class="intro-panel">
+            <h1 style="border:none; margin:0; font-size: 64px; text-shadow: var(--glow);">STRANGER<br>ESCAPE</h1>
+            <div class="intro-text">
+                <p>Las luces parpadean. El bosque de Mirkwood se cierra sobre vosotros.</p>
+                <p>El aire es frío y el cielo ha perdido su color.</p>
+                <p>Estáis perdidos en el Mundo del Revés y el portal se está cerrando.</p>
+                <p>Sientes una presencia observándote desde las sombras...</p>
+                <p style="color: var(--stranger-red); font-weight: bold;">Tenéis 40 minutos para encontrar el camino a casa antes de que lo que acecha en las sombras os encuentre.</p>
+            </div>
+            
+            <div style="margin-bottom: 30px;">
+                <p style="color: var(--neon-blue); font-family: 'Courier New', monospace; margin-bottom: 10px;">Identificación del Sujeto (Número):</p>
+                <input type="number" id="student-number" placeholder="000" style="background: #000; border: 1px solid var(--neon-blue); color: var(--neon-blue); padding: 12px; font-family: 'Courier New', monospace; font-size: 1.2rem; text-align: center; width: 150px; outline: none;">
+            </div>
+
+            <button class="b-start" onclick="initGame()">Encontrar el Camino</button>
+        </div>
+    </div>
+    
+    <div id="fase-tag" class="fase-info">MODO ADMIN: FASE 0</div>
+
+    <!-- FASE 1 -->
+    <div id="screen1" class="screen">
+        <h2 style="color: var(--neon-blue); text-shadow: 0 0 10px var(--neon-blue);">Fase 1: El Bosque de Hawkins (Secuencias)</h2>
+        <div class="grid-layout">
+            <div class="maze-wrapper">
+                <div id="maze1" class="maze maze-1"></div>
+                <div id="status1" class="status"></div>
+                <button id="next1" class="transition-btn" onclick="showScreen(2)">Entrar al Mundo del Revés 🕳️</button>
+            </div>
+            
+            <div class="toolbox">
+                <h3>Acciones Básicas</h3>
+                <div class="btn-grid">
+                    <button class="b-act" onclick="addCmd(1, 'AVANZAR')">Avanzar ⬆️</button>
+                    <button class="b-act" onclick="addCmd(1, 'GIRAR_IZQ')">Girar Izq ↩️</button>
+                    <button class="b-act" onclick="addCmd(1, 'GIRAR_DER')">Girar Der ↪️</button>
+                </div>
+            </div>
+
+            <div class="program-section">
+                <div id="prog1" class="program-area"></div>
+                <div class="actions">
+                    <button class="b-del" onclick="delCmd(1)">↩️ Borrar Último</button>
+                    <button class="b-clear" onclick="clearCmd(1)">🔄 Reiniciar</button>
+                    <button class="b-run" onclick="run1()">▶ EJECUTAR</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- FASE 2 -->
+    <div id="screen2" class="screen">
+        <h2 style="color: var(--neon-red); text-shadow: 0 0 10px var(--neon-red);">Fase 2: El Mundo del Revés (Lógica)</h2>
+        <div class="grid-layout">
+            <div class="maze-wrapper">
+                <div class="stats-bar">
+                    <span id="timer">🕰️ 0s</span>
+                    <span id="lines">📝 Líneas: 0</span>
+                    <span id="score-live" class="score-live">🏆 Puntos: 1000</span>
+                </div>
+                <div id="maze2" class="maze maze-2"></div>
+                <div id="status2" class="status"></div>
+                <button id="next2" class="transition-btn" style="background:var(--neon-green); box-shadow:0 0 15px var(--neon-green)" onclick="finishGame()">Siguiente Fase ☕</button>
+            </div>
+            
+            <div class="toolbox">
+                <h3>Acciones</h3>
+                <div class="btn-grid">
+                    <button class="b-act" onclick="addCmd(2, 'AVANZAR')">Avanzar</button>
+                    <button class="b-act" onclick="addCmd(2, 'GIRAR_IZQ')">Girar Izq</button>
+                    <button class="b-act" onclick="addCmd(2, 'GIRAR_DER')">Girar Der</button>
+                </div>
+                <h3>Control (Lógica)</h3>
+                <div class="btn-grid">
+                    <button class="b-ctrl" onclick="addCmd(2, 'WHILE')">Mientras...</button>
+                    <button class="b-ctrl" onclick="addCmd(2, 'IF')">Si...</button>
+                    <button class="b-ctrl" onclick="addCmd(2, 'ELSE')">Si No</button>
+                    <button class="b-ctrl" onclick="addCmd(2, 'FOR')">Repetir N</button>
+                </div>
+                <h3>Condiciones y Sensores</h3>
+                <div class="btn-grid">
+                    <button class="b-mod" onclick="addCmd(2, 'NOT')">NO</button>
+                    <button class="b-cond" onclick="addCmd(2, 'PATH')">Hay Camino</button>
+                    <button class="b-cond" onclick="addCmd(2, 'WALL')">Hay Pared</button>
+                    <button class="b-end" onclick="addCmd(2, 'END')">Cerrar Bloque ( } )</button>
+                </div>
+            </div>
+
+            <div class="program-section">
+                <div id="prog2" class="program-area"></div>
+                <div class="actions">
+                    <button class="b-del" onclick="delCmd(2)">↩️ Borrar Último</button>
+                    <button class="b-clear" onclick="clearCmd(2)">🔄 Reiniciar</button>
+                    <button class="b-run" onclick="run2()">▶ EJECUTAR LÓGICA</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- FASE 3: DICCIONARIO GENÉRICO -->
+    <div id="screen3" class="screen">
+        <h2 style="color: var(--neon-green); text-align: center; font-size: 3rem;">🎉 ¡Has escapado de Vecna!</h2>
+        
+        <div class="info-panel">
+            <h3 style="margin-top:0; color: var(--neon-blue); border-bottom: 1px solid #444; padding-bottom: 10px; font-size: 1.5rem;">Diccionario: De Bloques a Código Java</h3>
+            <p style="font-size: 1.1rem; color: #aaa;">Antes de ver tu puntuación, fíjate en cómo lo que acabas de hacer con botones se escribe en un entorno profesional:</p>
+            <pre style="background: #050505; padding: 20px; border-radius: 8px; border: 1px solid #333; margin-bottom: 20px;">
+<span class="st">// Acciones de movimiento</span>
+Avanzar             ➔  <span class="fn">avanzar</span>();
+Girar Der           ➔  <span class="fn">girarDerecha</span>();
+
+<span class="st">// Condicionales (Decisiones)</span>
+SI (Hay pared) {    ➔  <span class="kw">if</span> (<span class="fn">hayPared</span>()) {
+SI NO {             ➔  } <span class="kw">else</span> {
+
+<span class="st">// Bucles (Repeticiones)</span>
+MIENTRAS (NO pared) ➔  <span class="kw">while</span> (!<span class="fn">hayPared</span>()) {
+REPETIR 4 VECES     ➔  <span class="kw">for</span> (<span class="kw">int</span> i=0; i&lt;4; i++) {
+
+<span class="st">// Cierre de ámbito (Scope)</span>
+Cerrar Bloque       ➔  }
+            </pre>
+            <button class="transition-btn" style="display:block; background: var(--neon-green);" onclick="showScreen(4)">VER MI PUNTUACIÓN Y MI CÓDIGO JAVA ▶</button>
+        </div>
+    </div>
+
+    <!-- FASE 4: COMPARACIÓN CÓDIGO DEL USUARIO -->
+        <div id="screen4" class="screen">
+        <h2 style="color: var(--neon-blue); text-align: center; font-size: 2.5rem;">Tu Solución Analizada</h2>
+        
+        <div id="scoreDisplayFinal" style="text-align: center; font-family: 'Courier New', monospace; color: #fff; background: rgba(0,0,0,0.9); padding: 25px; border: 1px solid rgba(226, 29, 29, 0.4); max-width: 900px; margin: 0 auto 20px auto; backdrop-filter: blur(5px);"></div>
+
+        <div class="info-panel java-grid" style="max-width: 1200px;">
+            <div>
+                <h3 style="color: var(--neon-red); margin-top:0;">Tus Bloques</h3>
+                <div id="final-blocks" class="program-area" style="background: transparent; border: none; padding: 0;"></div>
+            </div>
+            <div style="border-left: 2px dashed #444; padding-left: 25px;">
+                <h3 style="color: var(--neon-green); margin-top:0;">Traducción a Java</h3>
+                <pre id="javaCodeArea" style="background: #050505; padding: 15px; border-radius: 8px; border: 1px solid #333; height: 100%;"></pre>
+            </div>
+        </div>
+        <button class="transition-btn" style="display:block; background: var(--stranger-red); width: auto; margin: 30px auto;" onclick="showScreen(5)">¿HAY UNA SEÑAL MÁS? ▶</button>
+    </div>
+
+    <!-- FASE 5: EL ORDENADOR ABANDONADO (PROMEDIO) -->
+    <div id="screen5" class="screen">
+        <h2 style="color: var(--neon-blue); text-align: center; font-size: 2.5rem; text-shadow: 0 0 10px var(--neon-blue);">Fase 3: El Ordenador del Laboratorio</h2>
+        <div class="info-panel" style="text-align: center;">
+            <div class="intro-text" style="font-size: 1.1rem; border-bottom: 1px solid #333; padding-bottom: 20px;">
+                <p>En una sala abandonada del laboratorio, encontráis un viejo ordenador conectado a sensores que registraban la actividad del portal al Upside Down. La pantalla muestra datos incompletos… pero parece que alguien intentó dejar una pista antes de desaparecer.</p>
+                <p>Un mensaje parpadea:</p>
+                <p style="color: #fff; font-family: 'Courier New', monospace; margin: 20px 0; background: rgba(226, 29, 29, 0.1); padding: 10px;">“La estabilidad del portal depende del equilibrio de energía.<br>Solo el valor medio permitirá sellarlo.”</p>
+                <p>Debajo, aparecen 8 lecturas de energía registradas en distintos momentos:</p>
+            </div>
+
+            <div style="margin: 30px 0; display: flex; justify-content: center; align-items: center; min-height: 80px; background: rgba(0,210,255,0.05); border: 1px dashed rgba(0,210,255,0.2);">
+                <span id="glitched-number" style="color: var(--neon-blue); font-weight: bold; font-family: 'Courier New', monospace; font-size: 3.5rem; text-shadow: 0 0 20px var(--neon-blue);">--</span>
+            </div>
+
+            <p style="color: var(--ash); font-size: 0.9rem; margin-bottom: 20px; font-style: italic;">
+                El sistema está bloqueado. Solo acepta un número. 
+                <span style="color: var(--neon-green);">(Quizás una herramienta de cálculo externa como Excel nos ayude...)</span>
+            </p>
+
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 15px;">
+                <input type="text" id="average-input" placeholder="INTRODUCE EL VALOR" style="background: #000; border: 1px solid var(--stranger-red); color: #fff; padding: 15px; font-family: 'Courier New', monospace; font-size: 1.2rem; text-align: center; width: 250px;">
+                <div id="average-status" class="status" style="width: 100%;"></div>
+                <button class="b-run" style="width: 100%;" onclick="checkAverage()">DESBLOQUEAR TERMINAL</button>
+            </div>
+            
+            <button id="next-to-binary" class="transition-btn" style="background: var(--neon-blue);" onclick="showScreen(6)">AVANZAR HACIA EL PORTAL ▶</button>
+        </div>
+    </div>
+
+    <!-- FASE 6: EL CÓDIGO BINARIO -->
+    <div id="screen6" class="screen">
+        <h2 style="color: var(--neon-red); text-align: center; font-size: 2.5rem; text-shadow: var(--glow);">Fase Final: La Transmisión de Luces</h2>
+        <div class="info-panel" style="text-align: center;">
+            <div class="intro-text" style="font-size: 1.1rem; border-bottom: 1px solid #333; padding-bottom: 20px;">
+                <p>Estás frente al portal, pero las enredaderas bloquean la salida.</p>
+                <p>Dustin intenta comunicarse desde la emisora... Las luces de Navidad en la pared parpadean rítmicamente.</p>
+                <p>Cuentas exactamente ciento treinta y cinco destellos antes de una pausa larga.</p>
+                <p>Debes traducir ese número al lenguaje que las máquinas puedan entender, el código que usan internamente (8 bits).</p>
+            </div>
+
+            <div style="margin: 30px 0;">
+                <div id="binary-toggles" style="display: flex; justify-content: center; gap: 15px; margin-bottom: 20px;">
+                    <!-- 8 bits -->
+                    <div class="bit-box" onclick="toggleBit(7)">
+                        <div class="bit-val" id="bit-7">0</div>
+                        <div class="bit-weight">128</div>
+                    </div>
+                    <div class="bit-box" onclick="toggleBit(6)">
+                        <div class="bit-val" id="bit-6">0</div>
+                        <div class="bit-weight">64</div>
+                    </div>
+                    <div class="bit-box" onclick="toggleBit(5)">
+                        <div class="bit-val" id="bit-5">0</div>
+                        <div class="bit-weight">32</div>
+                    </div>
+                    <div class="bit-box" onclick="toggleBit(4)">
+                        <div class="bit-val" id="bit-4">0</div>
+                        <div class="bit-weight">16</div>
+                    </div>
+                    <div class="bit-box" onclick="toggleBit(3)">
+                        <div class="bit-val" id="bit-3">0</div>
+                        <div class="bit-weight">8</div>
+                    </div>
+                    <div class="bit-box" onclick="toggleBit(2)">
+                        <div class="bit-val" id="bit-2">0</div>
+                        <div class="bit-weight">4</div>
+                    </div>
+                    <div class="bit-box" onclick="toggleBit(1)">
+                        <div class="bit-val" id="bit-1">0</div>
+                        <div class="bit-weight">2</div>
+                    </div>
+                    <div class="bit-box" onclick="toggleBit(0)">
+                        <div class="bit-val" id="bit-0">0</div>
+                        <div class="bit-weight">1</div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="binary-status" class="status" style="margin-bottom: 20px;"></div>
+            <button class="b-run" style="width: 100%; border-color: var(--neon-green); color: var(--neon-green);" onclick="checkBinary()">ENVIAR SEÑAL 📻</button>
+            <button id="final-exit-btn" class="transition-btn" style="background: var(--neon-green);" onclick="winGame()">¡EL PORTAL SE ABRE! SALIR 🚲</button>
+        </div>
+    </div>
+
+    <!-- FASE 7: GAME OVER -->
+    <div id="screen7" class="screen">
+        <div class="intro-panel">
+            <h1 style="border:none; margin:0; font-size: 64px; text-shadow: var(--glow); color: var(--stranger-red);">NO HAS PODIDO<br>SALIR</h1>
+            <div class="intro-text">
+                <p>Las sombras te han alcanzado.</p>
+                <p>El portal se ha cerrado definitivamente y el frío del Mundo del Revés ahora es parte de ti.</p>
+                <p style="color: var(--stranger-red); font-weight: bold; margin-top: 20px;">Tu tiempo se ha agotado. Vecna ha ganado esta vez.</p>
+            </div>
+            <button class="b-start" onclick="location.reload()">Reintentar la huída 🚲</button>
+        </div>
+    </div>
+
+    <script>
+        const playerIcons =[
+            '<div class="player-container" style="flex-direction:column; line-height:1;"><span style="transform: scaleX(-1); font-size:1.1em;">🚲</span><span style="color:#00d2ff; font-weight:900; font-size:1.1em; margin-top:-2px;">↑</span></div>', 
+            '<div class="player-container"><span style="transform: scaleX(-1); font-size:1.1em;">🚲</span><span style="color:#00d2ff; font-weight:900; font-size:1.1em; margin-left:3px;">→</span></div>', 
+            '<div class="player-container" style="flex-direction:column; line-height:1;"><span style="color:#00d2ff; font-weight:900; font-size:1.1em; margin-bottom:-2px;">↓</span><span style="transform: scaleX(-1); font-size:1.1em;">🚲</span></div>', 
+            '<div class="player-container"><span style="color:#00d2ff; font-weight:900; font-size:1.1em; margin-right:3px;">←</span><span style="font-size:1.1em;">🚲</span></div>'  
+        ];
+        
+        const map1 = [[0,1,1,1,1], [0,0,0,1,1],[1,1,0,1,1],[1,1,0,0,0],[1,1,1,1,2]];
+        const map2 = [[0,0,0,0,1,1,1,1],[1,1,1,0,1,1,1,1],[1,1,1,0,0,0,0,1],[1,1,1,1,1,1,0,1],[1,0,0,0,0,0,0,1],[1,0,1,1,1,1,1,1],[1,0,0,0,0,0,0,2],[1,1,1,1,1,1,1,1]];
+
+        let p1 = { x:0, y:0, dir:1 }; let p2 = { x:0, y:0, dir:1 };
+        let prog1 = []; let prog2 =[];
+        let startTime = 0; let timerInterval = null; let secondsElapsed = 0;
+        let numberCycleInterval = null;
+        let storedStudentNumber = 0;
+
+        // Timer de Escape Room (40 min)
+        let totalSecondsLeft = 40 * 60;
+        let globalTimerInterval = null;
+
+        function updateGlobalTimer() {
+            if (totalSecondsLeft <= 0) {
+                clearInterval(globalTimerInterval);
+                clearInterval(timerInterval);
+                showScreen(7);
+                document.getElementById('global-timer-overlay').style.display = 'none';
+                return;
+            }
+            totalSecondsLeft--;
+            const mins = Math.floor(totalSecondsLeft / 60);
+            const secs = totalSecondsLeft % 60;
+            document.getElementById('global-timer-display').innerText = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+            if (totalSecondsLeft < 20) { // Menos de 20 segundos para el minuto
+                document.getElementById('global-timer-display').style.color = 'var(--neon-red)';
+                document.getElementById('global-timer-display').parentElement.style.animation = 'pulse 0.5s infinite';
+            }
+        }
+
+        function initGame() {
+            const input = document.getElementById('student-number');
+            if (!input.value || isNaN(input.value)) {
+                alert("Por favor, introduce tu número de identificación para continuar.");
+                return;
+            }
+            storedStudentNumber = parseInt(input.value);
+            startGame();
+        }
+
+        function startGame() {
+            showScreen(1);
+            document.getElementById('global-timer-overlay').style.display = 'flex';
+            globalTimerInterval = setInterval(updateGlobalTimer, 1000);
+        }
+
+        function renderMaze(level, map, player) {
+            const container = document.getElementById(`maze${level}`);
+            container.innerHTML = '';
+            for(let y=0; y<map.length; y++) {
+                for(let x=0; x<map[0].length; x++) {
+                    const cell = document.createElement('div');
+                    let cType = map[y][x]===1 ? `wall-${level}` : (map[y][x]===2 ? `goal goal-${level}` : '');
+                    cell.className = 'cell ' + cType;
+                    
+                    if(x===player.x && y===player.y) cell.innerHTML = playerIcons[player.dir];
+                    else if(map[y][x]===2) cell.innerHTML = level===1 ? '🕳️' : '🧇';
+                    else if(map[y][x]===1) cell.innerHTML = level===1 ? '🌲' : (((x+y)%3 === 0) ? '🕷️' : '👾');
+                    container.appendChild(cell);
+                }
+            }
+        }
+
+        function renderProg(level) {
+            const container = document.getElementById(`prog${level}`);
+            container.innerHTML = '';
+            let indent = 0;
+            const program = level === 1 ? prog1 : prog2;
+            
+            for(let i=0; i<program.length; i++) {
+                let cmd = program[i];
+                if (cmd.type === 'END' || cmd.type === 'ELSE') indent = Math.max(0, indent - 1);
+
+                let label = cmd.type;
+                let isLogic = false;
+
+                if (['IF','WHILE','FOR','ELSE'].includes(cmd.type)) {
+                    isLogic = true;
+                    if(cmd.type==='IF') label = 'SI ';
+                    if(cmd.type==='WHILE') label = 'MIENTRAS ';
+                    if(cmd.type==='FOR') label = `REPETIR ${cmd.val} VECES {`;
+                    if(cmd.type==='ELSE') label = '} SI NO {';
+
+                    if (cmd.type === 'IF' || cmd.type === 'WHILE') {
+                        let j = i + 1;
+                        if(program[j]?.type === 'NOT') { label += 'NO '; j++; }
+                        if(program[j]?.type === 'PATH') { label += '(Hay Camino) {'; i = j; }
+                        else if(program[j]?.type === 'WALL') { label += '(Hay Pared) {'; i = j; }
+                        else { label += '... {'; }
+                    }
+                } 
+                else if (cmd.type === 'END') label = '}';
+                else if (cmd.type === 'NOT') label = 'NO';
+                else if (cmd.type === 'PATH') label = 'Hay Camino';
+                else if (cmd.type === 'WALL') label = 'Hay Pared';
+
+                const div = document.createElement('div');
+                div.className = `block ${isLogic ? 'bk-ctrl' : (cmd.type==='END' ? 'bk-end' : 'bk-act')}`;
+                div.style.marginLeft = (indent * 22) + 'px'; 
+                div.innerText = label;
+                container.appendChild(div);
+
+                if (['IF','WHILE','FOR'].includes(cmd.type)) indent++;
+                if (cmd.type === 'ELSE') indent++;
+            }
+            container.scrollTop = container.scrollHeight;
+            
+            if(level === 2) {
+                document.getElementById('lines').innerText = `📝 Líneas: ${program.length}`;
+                updateLiveScore();
+            }
+        }
+
+        function getLiveScore() {
+            let lines = prog2.length;
+            let uniqueBlocks = new Set(prog2.map(c => c.type)).size;
+            let score = 1000 - (secondsElapsed * 2) - (lines * 15) + (uniqueBlocks * 40);
+            return Math.max(100, score);
+        }
+
+        function updateLiveScore() {
+            document.getElementById('score-live').innerText = `🏆 Puntos: ${getLiveScore()}`;
+        }
+
+        function setStatus(level, msg, color, showNext = false) {
+            const el = document.getElementById(`status${level}`);
+            el.innerText = msg; el.style.borderColor = color; el.style.color = color;
+            document.getElementById(`next${level}`).style.display = showNext ? 'block' : 'none';
+        }
+
+        function showScreen(num) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(`screen${num}`).classList.add('active');
+            
+            document.getElementById('fase-tag').innerText = `MODO ADMIN: FASE ${num}`;
+
+            if(num === 2 && !startTime) {
+                timerInterval = setInterval(() => {
+                    if(startTime) {
+                        secondsElapsed = Math.floor((Date.now() - startTime) / 1000);
+                        document.getElementById('timer').innerText = `🕰️ ${secondsElapsed}s`;
+                        updateLiveScore();
+                    }
+                }, 1000);
+            }
+
+            if(num === 4) {
+                document.getElementById('final-blocks').innerHTML = document.getElementById('prog2').innerHTML;
+            }
+
+            if(num === 5) {
+                startNumberCycle();
+            } else if (numberCycleInterval) {
+                clearTimeout(numberCycleInterval);
+                numberCycleInterval = null;
+            }
+        }
+
+        function startNumberCycle() {
+            const readings = [12, 18, 25, 30, 22, "15,6", 28, "20,5"];
+            const delays = [1000, 500, 1000, 500, 1000, 500, 1000, 500];
+            let idx = 0;
+            
+            function nextNum() {
+                const el = document.getElementById('glitched-number');
+                if(!el) return;
+                el.innerText = readings[idx];
+                
+                // Efecto de glich visual al cambiar
+                el.style.opacity = '0.3';
+                setTimeout(() => el.style.opacity = '1', 50);
+
+                numberCycleInterval = setTimeout(() => {
+                    idx = (idx + 1) % readings.length;
+                    nextNum();
+                }, delays[idx]);
+            }
+            nextNum();
+        }
+
+        function addCmd(level, type) {
+            if(level === 2 && !startTime) startTime = Date.now(); 
+            let val = null;
+            if(type === 'FOR') {
+                val = prompt("¿Cuántas veces quieres repetir?", "4");
+                if(!val || isNaN(val)) return;
+            }
+            if(level === 1) prog1.push({type}); else prog2.push({type, val: parseInt(val)});
+            renderProg(level);
+        }
+
+        function delCmd(level) {
+            if(level === 1) prog1.pop(); else prog2.pop();
+            renderProg(level);
+        }
+
+        function clearCmd(level) {
+            if(level === 1) { prog1 =[]; p1 = {x:0, y:0, dir:1}; renderMaze(1, map1, p1); }
+            else { 
+                prog2 =[]; p2 = {x:0, y:0, dir:1}; renderMaze(2, map2, p2); 
+                startTime = Date.now(); 
+                secondsElapsed = 0;
+                document.getElementById('timer').innerText = `🕰️ 0s`;
+            }
+            renderProg(level);
+            setStatus(level, '', 'transparent', false);
+        }
+
+        function findBlockBounds(startIdx) {
+            let depth = 0; let elseIdx = -1; let endIdx = prog2.length;
+            for (let i = startIdx; i < prog2.length; i++) {
+                let t = prog2[i].type;
+                if (['IF', 'WHILE', 'FOR'].includes(t)) depth++;
+                else if (t === 'ELSE' && depth === 1) elseIdx = i;
+                else if (t === 'END') { depth--; if (depth === 0) { endIdx = i; break; } }
+            }
+            return { elseIdx, endIdx };
+        }
+
+        function checkSensor(type) {
+            let nx = p2.x + (p2.dir===1?1 : p2.dir===3?-1 : 0); let ny = p2.y + (p2.dir===2?1 : p2.dir===0?-1 : 0);
+            let inside = nx>=0 && nx<8 && ny>=0 && ny<8;
+            if(type === 'PATH') return inside && map2[ny][nx] !== 1;
+            if(type === 'WALL') return !inside || map2[ny][nx] === 1;
+            return false;
+        }
+
+        async function runInterpreter(start, end) {
+            let i = start;
+            while(i <= end && i < prog2.length) {
+                let cmd = prog2[i];
+                if (['AVANZAR', 'GIRAR_DER', 'GIRAR_IZQ'].includes(cmd.type)) {
+                    if(cmd.type === 'GIRAR_DER') p2.dir = (p2.dir + 1) % 4;
+                    else if(cmd.type === 'GIRAR_IZQ') p2.dir = (p2.dir + 3) % 4;
+                    else {
+                        let nx = p2.x + (p2.dir===1?1 : p2.dir===3?-1 : 0); let ny = p2.y + (p2.dir===2?1 : p2.dir===0?-1 : 0);
+                        if(nx<0 || nx>7 || ny<0 || ny>7 || map2[ny][nx]===1) return 'CRASH';
+                        p2.x = nx; p2.y = ny;
+                    }
+                    renderMaze(2, map2, p2); await new Promise(r => setTimeout(r, 200)); i++;
+                }
+                else if (cmd.type === 'FOR') {
+                    let bounds = findBlockBounds(i);
+                    for(let r=0; r < cmd.val; r++) { let res = await runInterpreter(i+1, bounds.endIdx - 1); if(res === 'CRASH' || res === 'WIN') return res; }
+                    i = bounds.endIdx + 1;
+                }
+                else if (cmd.type === 'IF' || cmd.type === 'WHILE') {
+                    let j = i + 1; let isNot = false; if (prog2[j]?.type === 'NOT') { isNot = true; j++; }
+                    let condType = prog2[j]?.type; let bounds = findBlockBounds(i);
+
+                    if (cmd.type === 'IF') {
+                        let result = checkSensor(condType); if (isNot) result = !result;
+                        if (result) { let res = await runInterpreter(j + 1, (bounds.elseIdx !== -1 ? bounds.elseIdx : bounds.endIdx) - 1); if(res === 'CRASH' || res === 'WIN') return res; } 
+                        else if (bounds.elseIdx !== -1) { let res = await runInterpreter(bounds.elseIdx + 1, bounds.endIdx - 1); if(res === 'CRASH' || res === 'WIN') return res; }
+                        i = bounds.endIdx + 1;
+                    } 
+                    else if (cmd.type === 'WHILE') {
+                        let safety = 0;
+                        while (safety < 150) {
+                            let result = checkSensor(condType); if (isNot) result = !result; if (!result) break;
+                            let res = await runInterpreter(j + 1, bounds.endIdx - 1); if(res === 'CRASH' || res === 'WIN') return res; safety++;
+                        }
+                        i = bounds.endIdx + 1;
+                    }
+                } else { i++; }
+                if(map2[p2.y][p2.x] === 2) return 'WIN';
+            }
+            return 'OK';
+        }
+
+        async function run1() {
+            p1 = {x:0, y:0, dir:1}; renderMaze(1, map1, p1); setStatus(1, 'Huyendo por el bosque...', 'var(--neon-blue)', false);
+            for(let cmd of prog1) {
+                await new Promise(r => setTimeout(r, 350));
+                if(cmd.type === 'GIRAR_IZQ') p1.dir = (p1.dir + 3) % 4;
+                else if(cmd.type === 'GIRAR_DER') p1.dir = (p1.dir + 1) % 4;
+                else if(cmd.type === 'AVANZAR') {
+                    let nx = p1.x + (p1.dir===1?1 : p1.dir===3?-1 : 0); let ny = p1.y + (p1.dir===2?1 : p1.dir===0?-1 : 0);
+                    if(nx<0 || nx>4 || ny<0 || ny>4 || map1[ny][nx]===1) { setStatus(1, '¡El Demogorgon te atrapó!', 'var(--neon-red)', false); return; }
+                    p1.x = nx; p1.y = ny;
+                }
+                renderMaze(1, map1, p1);
+                if(map1[p1.y][p1.x] === 2) { setStatus(1, '¡Encontraste el portal!', 'var(--neon-green)', true); return; }
+            }
+            setStatus(1, 'Te quedaste a medias...', 'var(--neon-red)', false);
+        }
+
+        async function run2() {
+            p2 = {x:0, y:0, dir:1}; renderMaze(2, map2, p2); setStatus(2, 'Procesando...', 'var(--neon-blue)', false);
+            let result = await runInterpreter(0, prog2.length - 1);
+            if(result === 'WIN') {
+                clearInterval(timerInterval);
+                setStatus(2, '¡ESCAPASTE DEL MUNDO DEL REVÉS!', 'var(--neon-green)', true);
+            } else if (result === 'CRASH') { setStatus(2, '¡Las enredaderas te atraparon!', 'var(--neon-red)', false);
+            } else { setStatus(2, 'Bucle finalizado sin salida.', 'var(--neon-red)', false); }
+        }
+
+        function finishGame() {
+            showScreen(3);
+            let lines = prog2.length;
+            let uniqueBlocks = new Set(prog2.map(c => c.type)).size;
+            let score = getLiveScore();
+
+            document.getElementById('scoreDisplayFinal').innerHTML = `
+                <h2 style="margin:0; color:var(--neon-green); font-size:2rem;">🏆 PUNTUACIÓN FINAL: ${score} 🏆</h2>
+                <div style="margin-top:5px; font-size:1rem; color:#aaa;">
+                    ⏳ Tiempo: <span style="color:#fff">${secondsElapsed}s</span> &nbsp;|&nbsp; 
+                    📝 Líneas: <span style="color:#fff">${lines}</span> &nbsp;|&nbsp; 
+                    🧠 Bloques diferentes: <span style="color:#fff">${uniqueBlocks}</span>
+                </div>
+            `;
+
+            let javaCode = ""; let ind = 0;
+            const addLine = (str) => { javaCode += "    ".repeat(ind) + str + "\n"; };
+
+            for(let i=0; i<prog2.length; i++) {
+                let c = prog2[i];
+                if(c.type === 'AVANZAR') addLine("<span class='fn'>avanzar</span>();");
+                else if(c.type === 'GIRAR_DER') addLine("<span class='fn'>girarDerecha</span>();");
+                else if(c.type === 'GIRAR_IZQ') addLine("<span class='fn'>girarIzquierda</span>();");
+                else if(c.type === 'IF' || c.type === 'WHILE') {
+                    let j = i+1; let isNot = false; if(prog2[j]?.type === 'NOT') { isNot = true; j++; }
+                    let cond = prog2[j]?.type === 'PATH' ? "<span class='fn'>hayCamino</span>()" : (prog2[j]?.type === 'WALL' ? "<span class='fn'>hayPared</span>()" : "true");
+                    if(isNot) cond = "!" + cond;
+                    addLine(`<span class='kw'>${c.type === 'IF' ? 'if' : 'while'}</span> (${cond}) {`);
+                    ind++; i = j; 
+                }
+                else if(c.type === 'ELSE') { ind = Math.max(0, ind-1); addLine("} <span class='kw'>else</span> {"); ind++; }
+                else if(c.type === 'FOR') { addLine(`<span class='kw'>for</span> (<span class='kw'>int</span> i=0; i&lt;<span class='kw'>${c.val}</span>; i++) {`); ind++; }
+                else if(c.type === 'END') { ind = Math.max(0, ind-1); addLine("}"); }
+            }
+            document.getElementById('javaCodeArea').innerHTML = javaCode;
+        }
+
+        // Gestión de Parámetro GET fase
+        const urlParams = new URLSearchParams(window.location.search);
+        const startFase = urlParams.get('fase');
+        if (startFase !== null) {
+            const f = parseInt(startFase);
+            if (f >= 1 && f <= 7) {
+                startGame();
+                showScreen(f);
+            }
+        }
+
+        // AVERAGE CHALLENGE LOGIC
+        function checkAverage() {
+            const val = document.getElementById('average-input').value.trim().replace(',', '.');
+            const status = document.getElementById('average-status');
+            // Sum: 12+18+25+30+22+15.6+28+20.5 = 171.1 / 8 = 21.3875
+            // Rounding or precise? Let's check for 21.3875 or 21.39
+            const correct = 21.3875;
+            
+            if(parseFloat(val) === correct) {
+                status.innerText = "ACCESO CONCEDIDO. La señal se estabiliza.";
+                status.style.color = "var(--neon-green)";
+                status.style.borderColor = "var(--neon-green)";
+                document.getElementById('next-to-binary').style.display = 'block';
+            } else {
+                status.innerText = "ERROR: VALOR INCORRECTO. El sistema rechaza la clave.";
+                status.style.color = "var(--neon-red)";
+                status.style.borderColor = "var(--neon-red)";
+            }
+        }
+
+        // BINARY LOGIC
+        let bits = [0,0,0,0,0,0,0,0];
+        function toggleBit(index) {
+            bits[index] = bits[index] === 0 ? 1 : 0;
+            const box = document.querySelectorAll('.bit-box')[7-index]; // reverse for weights
+            box.classList.toggle('bit-active');
+            document.getElementById(`bit-${index}`).innerText = bits[index];
+            
+            let sum = 0;
+            bits.forEach((b, i) => { if(b===1) sum += Math.pow(2, i); });
+        }
+
+        function checkBinary() {
+            let sum = 0;
+            bits.forEach((b, i) => { if(b===1) sum += Math.pow(2, i); });
+            const status = document.getElementById('binary-status');
+            if(sum === 135) {
+                status.innerText = "¡LA SEÑAL ES CORRECTA! El portal vibra con energía.";
+                status.style.color = "var(--neon-green)";
+                status.style.borderColor = "var(--neon-green)";
+                document.getElementById('final-exit-btn').style.display = 'block';
+            } else {
+                status.innerText = "Señal incorrecta... la estática es ensordecedora.";
+                status.style.color = "var(--neon-red)";
+                status.style.borderColor = "var(--neon-red)";
+            }
+        }
+
+        function winGame() {
+            clearInterval(globalTimerInterval);
+            document.getElementById('global-timer-overlay').style.display = 'none';
+            
+            const scoreHTML = document.getElementById('scoreDisplayFinal').innerHTML;
+            const javaCodeHTML = document.getElementById('javaCodeArea').innerHTML;
+            const finalVerificationCode = (storedStudentNumber * 2) + 3;
+            
+            const winScreen = `
+                <div class="intro-panel" style="border-color: var(--neon-green); box-shadow: 0 0 50px rgba(57, 255, 20, 0.2); max-width: 1000px; width: 95%;">
+                    <h1 style="border:none; margin:0; font-size: 54px; text-shadow: 0 0 20px var(--neon-green); color: var(--neon-green);">¡MISIÓN CUMPLIDA!</h1>
+                    
+                    <div class="intro-text" style="color: #fff; margin-top: 20px; border-bottom: 1px solid #333; padding-bottom: 20px;">
+                        <p>Habéis sellado el portal y escapado del Mundo del Revés.</p>
+                        <p style="margin-top: 20px;">Vuestro código de verificación para completar la misión es:</p>
+                        <div style="font-size: 4rem; color: var(--neon-green); font-family: 'Creepster', cursive; margin: 10px 0; text-shadow: 0 0 10px var(--neon-green);">
+                            ${finalVerificationCode}
+                        </div>
+                        <p style="color: var(--ash); font-size: 1rem;">Entregad este código, vuestra puntuación y vuestro código Java al <span style="color: var(--neon-blue); font-weight: bold;">Profesor</span>.</p>
+                    </div>
+
+                    <div style="margin-top: 30px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; text-align: left;">
+                        <div style="background: rgba(0,0,0,0.5); padding: 15px; border: 1px solid #333;">
+                            <h3 style="color: var(--neon-blue); margin-top: 0; font-size: 1.2rem;">Rendimiento del Laberinto</h3>
+                            <div style="transform: scale(0.85); transform-origin: top left;">
+                                ${scoreHTML}
+                            </div>
+                        </div>
+                        <div style="background: rgba(5,5,5,0.9); padding: 15px; border: 1px solid #333; overflow: hidden;">
+                            <h3 style="color: var(--neon-green); margin-top: 0; font-size: 1.2rem;">Código Java Generado</h3>
+                            <pre style="font-size: 11px; max-height: 250px; overflow-y: auto; text-align: left; background: transparent; border: none;">${javaCodeHTML}</pre>
+                        </div>
+                    </div>
+
+                    <button class="b-start" style="border-color: var(--neon-blue); color: var(--neon-blue); margin-top: 30px;" onclick="location.reload()">Finalizar</button>
+                </div>
+            `;
+            
+            document.body.innerHTML = '<div class="overlay"></div><div class="particles"></div><div id="bg-container"></div>' + winScreen;
+        }
+
+        renderMaze(1, map1, p1); renderMaze(2, map2, p2);
+    </script>
+</body>
+</html>
+
